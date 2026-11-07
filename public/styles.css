@@ -51,6 +51,13 @@
 /* ==================================================
     2. BASE
    ================================================== */
+
+/* ESCALA GENERAL DE LA INTERFAZ
+   Todos los tamaños de la hoja están en rem, así que este valor escala la app completa
+   (texto, botones, íconos, tablas), igual que el zoom del navegador.
+   100 % = 16 px por rem · 80 % = 12.8 px por rem. */
+html { font-size: 80%; }
+
 body {
     font-family: var(--pt-fuente);
     min-height: 100vh;
@@ -58,14 +65,14 @@ body {
 
 .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400;
-    font-size: 22px;
+    font-size: 1.375rem;
     line-height: 1;
     vertical-align: middle;
     pointer-events: none;
 }
 
 .icono-relleno { font-variation-settings: 'FILL' 1, 'wght' 400; }
-.material-symbols-outlined.icono-chico { font-size: 16px; }
+.material-symbols-outlined.icono-chico { font-size: 1rem; }
 
 
 /* ==================================================
@@ -84,9 +91,9 @@ body {
 
 .tarjeta-principal {
     width: 100%;
-    max-width: 1600px;
-    height: calc(100vh - 96px);
-    min-height: 520px;
+    max-width: 100rem;
+    height: calc(100vh - 6rem);
+    min-height: 32rem;
     border-radius: var(--pt-radio-xl);
     overflow: hidden;
 }
@@ -222,21 +229,21 @@ body {
 
 /* Tamaño grande: botones de los modales y SALIR */
 .btn-pill-lg {
-    min-width: 190px;
-    height: 58px;
+    min-width: 11.875rem;
+    height: 3.625rem;
     padding: .4rem 1.25rem;
     font-size: 1.35rem;
 }
 
-    .btn-pill-lg .material-symbols-outlined { font-size: 34px; }
+    .btn-pill-lg .material-symbols-outlined { font-size: 2.125rem; }
 
 .modal-footer .btn-pill {
-    min-width: 170px;
-    height: 54px;
+    min-width: 10.625rem;
+    height: 3.375rem;
     font-size: 1.2rem;
 }
 
-    .modal-footer .btn-pill .material-symbols-outlined { font-size: 30px; }
+    .modal-footer .btn-pill .material-symbols-outlined { font-size: 1.875rem; }
 
 /* Rellenos: color fijo, texto blanco */
 .btn-aceptar,
@@ -390,7 +397,7 @@ body {
 
     .tabla-tablero td.motivo {
         white-space: normal;
-        min-width: 190px;
+        min-width: 12rem;
         font-size: .85rem;
     }
 
@@ -410,6 +417,9 @@ body {
 /* ==================================================
     8. MODALES
    ================================================== */
+.modal-pt { --bs-modal-width: 31.25rem; }
+#menuMovil { --bs-offcanvas-width: 25rem; }
+
 .modal-pt .modal-content {
     background: var(--pt-gris-modal);
     border: none;
@@ -452,7 +462,7 @@ body {
 
 @media (max-width: 576px) {
     .modal-pt { margin: 1rem; }
-    .modal-footer .btn-pill { min-width: 130px; }
+    .modal-footer .btn-pill { min-width: 8rem; }
 }
 
 
@@ -471,7 +481,7 @@ body {
 
 .card-login {
     width: 100%;
-    max-width: 400px;
+    max-width: 25rem;
     border: none;
     border-radius: var(--pt-radio-lg);
     box-shadow: var(--pt-sombra-suave);
