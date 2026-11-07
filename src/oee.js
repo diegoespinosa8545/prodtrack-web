@@ -13,6 +13,12 @@ function alerta(r) {
 }
 
 const minutosEntre = (a, b) => Math.max(0, (new Date(b.replace(' ', 'T')) - new Date(a.replace(' ', 'T'))) / 60000);
+// Minutos de un paro que caen dentro de una hora del tablero
+const traslape = (p, r, ahora) => {
+  const ini = new Date(p.horainicio.replace(' ', 'T')), fin = new Date((p.horafin || ahora).replace(' ', 'T'));
+  const hIni = new Date(r.horainicio.replace(' ', 'T')), hFin = new Date(hIni.getTime() + r.minutosprogramados * 60000);
+  return Math.max(0, (Math.min(fin, hFin) - Math.max(ini, hIni)) / 60000);
+};
 const recortar = (x) => Math.max(0, Math.min(1, x));
 const r4 = (x) => Math.round(x * 10000) / 10000;
 
@@ -34,9 +40,11 @@ function calcularOEE(registros, paros, ahora) {
   // Minutos ideales = piezas × (60 / UPH estándar del modelo de esa hora)
   const minutosIdeales = capturadas.reduce((s, r) => s + (r.uphreal * 60) / r.uphestandar, 0);
 
-  // Solo cuenta el tiempo de las horas ya capturadas mientras el turno sigue abierto
-  const minCapturados = capturadas.reduce((s, r) => s + r.minutosprogramados, 0);
-  const baseRend = Math.max(minCapturados - planeados - noPlaneados, 1);
+  // Base del Rendimiento: tiempo operativo de las horas ya capturadas, es decir, sus minutos
+  // menos los paros (planeados y no planeados) que cayeron dentro de esas mismas horas.
+  // Al cerrar el turno todas están capturadas y esto es igual al Tiempo operativo.
+  const baseRend = Math.max(capturadas.reduce((s, r) =>
+    s + r.minutosprogramados - paros.reduce((m, p) => m + traslape(p, r, ahora), 0), 0), 1);
 
   const disponibilidad = recortar(tiempoOperativo / tiempoPlaneado);
   const rendimiento = capturadas.length ? recortar(minutosIdeales / baseRend) : 0;

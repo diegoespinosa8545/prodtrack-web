@@ -505,7 +505,12 @@ function formCerrar(idTurno, registros) {
     <div class="mb-2"><label class="form-label">Observaciones</label><textarea name="Observaciones" maxlength="300" rows="2" class="form-control"></textarea></div>`,
   async (f) => {
     const k = await api(`/turnos/${idTurno}/cerrar`, { method: 'POST', body: f });
-    aviso(`Turno cerrado · OEE ${pct(k.oee)}`); estado.turnoSel = null; refrescar();
+    aviso(`Turno cerrado · OEE ${pct(k.oee)}`); estado.turnoSel = null;
+    // Al cerrar se muestra el turno recién cerrado con sus indicadores ya congelados
+    if (puede.verHistorial()) {
+      estado.vista = 'detalle'; estado.detalleId = idTurno; clearInterval(estado.temporizador);
+      await cargarActivos(); dibujarDetalle(idTurno, true);
+    } else refrescar();
   }, 'CERRAR');
 }
 
