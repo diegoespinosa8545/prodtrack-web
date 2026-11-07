@@ -65,6 +65,7 @@ body {
 }
 
 .icono-relleno { font-variation-settings: 'FILL' 1, 'wght' 400; }
+.material-symbols-outlined.icono-chico { font-size: 16px; }
 
 
 /* ==================================================

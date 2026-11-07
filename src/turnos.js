@@ -111,6 +111,23 @@ async function exigirActivo(c, idTurno) {
   if (r.rows[0].estado !== 'activo') throw new ErrorNegocio('El turno ya está cerrado');
 }
 
+// ---------- Meta de cada hora descontando paros planeados ----------
+// UphPlaneado = UphEstandar × (MinutosProgramados − minutos de paro planeado dentro de esa hora) / 60
+// Un paro planeado (comida, junta) se cuenta en la hora real en que ocurrió; si cruza dos horas,
+// se reparte según los minutos que cae en cada una. Un paro en curso cuenta hasta este momento.
+async function recalcularMetas(c, idTurno) {
+  await c.query(
+    `UPDATE Registro r SET UphPlaneado = ROUND(r.UphEstandar * GREATEST(0, r.MinutosProgramados - COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (
+                 LEAST(COALESCE(p.HoraFin, ${AHORA}), r.HoraInicio + r.MinutosProgramados * INTERVAL '1 minute')
+               - GREATEST(p.HoraInicio, r.HoraInicio))) / 60)
+        FROM Paro p JOIN CategoriaParo cp ON cp.Id_CategoriaParo = p.Id_CategoriaParo
+        WHERE p.Id_Turno = r.Id_Turno AND cp.Planeado
+          AND p.HoraInicio < r.HoraInicio + r.MinutosProgramados * INTERVAL '1 minute'
+          AND COALESCE(p.HoraFin, ${AHORA}) > r.HoraInicio), 0)) / 60.0)
+     WHERE r.Id_Turno = $1`, [idTurno]);
+}
+
 // ---------- Capturar una hora ----------
 async function capturarHora(idRegistro, { UphReal, BuenasPrimera, Motivo, Contramedida, Id_Usuario }) {
   const real = Number(UphReal);
@@ -125,10 +142,12 @@ async function capturarHora(idRegistro, { UphReal, BuenasPrimera, Motivo, Contra
   const motivo = (Motivo || '').trim() || null;
 
   return transaccion(async (c) => {
+    const t = await c.query(`SELECT Id_Turno FROM Registro WHERE Id_Registro = $1`, [idRegistro]);
+    if (!t.rowCount) throw new ErrorNegocio('Hora no encontrada', 404);
+    await exigirActivo(c, t.rows[0].id_turno);
+    await recalcularMetas(c, t.rows[0].id_turno);
     const r = await c.query(`SELECT Id_Turno, UphPlaneado, UphReal FROM Registro WHERE Id_Registro = $1`, [idRegistro]);
-    if (!r.rowCount) throw new ErrorNegocio('Hora no encontrada', 404);
     const reg = r.rows[0];
-    await exigirActivo(c, reg.id_turno);
     if (real < reg.uphplaneado && !motivo) {
       throw new ErrorNegocio(`No se cumplió la meta (${real} de ${reg.uphplaneado}); el motivo es obligatorio`);
     }
@@ -156,6 +175,7 @@ async function cambiarModelo(idTurno, { Id_Modelo, DesdeHora }) {
        FROM Modelo m
        WHERE m.Id_Modelo = $2 AND r.Id_Turno = $1 AND r.NumeroHora >= $3 AND r.UphReal IS NULL`,
       [idTurno, Id_Modelo, DesdeHora]);
+    await recalcularMetas(c, idTurno);
     return r.rowCount;
   });
 }
@@ -170,6 +190,7 @@ async function registrarParo(idTurno, { Id_CategoriaParo, HoraInicio, HoraFin, D
        VALUES ($1, $2, COALESCE($3::timestamp, date_trunc('minute', ${AHORA})), $4::timestamp, $5, $6)
        RETURNING Id_Paro`,
       [idTurno, Id_CategoriaParo, HoraInicio || null, HoraFin || null, (Descripcion || '').trim() || null, Id_Usuario]);
+    await recalcularMetas(c, idTurno);
     return r.rows[0].id_paro;
   });
 }
@@ -182,6 +203,7 @@ async function terminarParo(idParo) {
     await exigirActivo(c, p.rows[0].id_turno);
     await c.query(
       `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, date_trunc('minute', ${AHORA})) WHERE Id_Paro = $1`, [idParo]);
+    await recalcularMetas(c, p.rows[0].id_turno);
     return p.rows[0].id_turno;
   });
 }
@@ -199,6 +221,7 @@ async function cerrarTurno(idTurno, { Observaciones, CerradoEn } = {}) {
     await c.query(
       `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, $2::timestamp) WHERE Id_Turno = $1 AND HoraFin IS NULL`,
       [idTurno, cierre]);
+    await recalcularMetas(c, idTurno);
 
     const { indicadores: k } = await obtenerTurno(idTurno, c);
     await c.query(

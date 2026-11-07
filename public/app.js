@@ -299,12 +299,17 @@ async function dibujarDetalle(id, desdeHistorial = false) {
         ? `<button class="btn btn-pill btn-contorno c-azul btn-sm" data-accion="capturar" data-id="${r.id_registro}">Capturar</button>`
         : `<button class="btn-icono" title="Editar" data-accion="capturar" data-id="${r.id_registro}">${icono('edit')}</button>`)
       : '';
+    // Si hubo paro planeado en esa hora, la meta es menor que la completa: se marca con un reloj
+    const metaCompleta = Math.round((r.uphestandar * r.minutosprogramados) / 60);
+    const minPlaneados = Math.round(((metaCompleta - r.uphplaneado) * 60) / r.uphestandar);
+    const marcaMeta = r.uphplaneado < metaCompleta
+      ? `<span class="text-secondary" title="Meta descontada por ${minPlaneados} min de paro planeado">${icono('schedule', 'icono-chico')}</span> ` : '';
     const audit = r.editadopor ? `Editado por ${esc(r.editadopor)}` : r.capturadopor ? `Capturado por ${esc(r.capturadopor)}` : '';
     return `<tr class="fila-${r.alerta}">
       <th scope="row" class="text-center">${r.numerohora}</th>
       <td>${hora(r.horainicio)} <span class="text-secondary small">${r.minutosprogramados}′</span></td>
       <td title="${esc(r.modelo)}">${esc(r.numeroparte)}</td>
-      <td class="text-end">${r.uphplaneado}</td>
+      <td class="text-end">${marcaMeta}${r.uphplaneado}</td>
       <td class="text-end fw-bold">${r.uphreal ?? ''}</td>
       <td class="text-end">${r.buenasprimera ?? ''}</td>
       <td class="text-end">${cumpl}</td>
@@ -375,6 +380,7 @@ async function dibujarDetalle(id, desdeHistorial = false) {
               <span><span class="semaforo amarilla"></span> 85–99 %</span>
               <span><span class="semaforo roja"></span> &lt; 85 %</span>
               <span><span class="semaforo"></span> pendiente</span>
+              <span>${icono('schedule', 'icono-chico')} meta descontada por paro planeado</span>
             </div>
           </div>
         </div>

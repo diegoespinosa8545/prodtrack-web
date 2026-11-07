@@ -49,7 +49,8 @@ server.js            arranque del servidor
 - Alerta por hora: verde ≥ 100 % de la meta, amarilla 85–99 %, roja < 85 %.
 - Motivo obligatorio cuando la hora no cumple la meta (validado en la API y con un CHECK en la base).
 - Auditoría: quién capturó y quién editó cada hora.
-- Paros planeados (comida, juntas) no penalizan la Disponibilidad.
+- Paros planeados (comida, juntas) no penalizan la Disponibilidad y descuentan su tiempo de la meta de la hora en que ocurrieron (repartido si cruzan dos horas); la hora se marca con un reloj.
+- Al cerrar el turno, los paros que sigan en curso se terminan a la hora del cierre (cada turno responde solo por su tiempo).
 - OEE = Disponibilidad × Rendimiento × Calidad; Rendimiento usa minutos ideales (piezas × 60 / UPH estándar).
 
 ## Fuera de alcance del prototipo

@@ -29,22 +29,37 @@ async function turnoEjemplo({ fecha, maquina, tipo, modelo, patron, horasACaptur
     Id_Maquina: maquina, Id_TipoTurno: tt.id_tipoturno, Fecha: fecha, Id_Tecnico: ids.tecnico,
     Id_Operador: ids.operador, Id_Modelo: modelo, AbiertoEn: tt.inicio,
   });
-  const { registros } = await T.obtenerTurno(id);
-  for (const r of registros.slice(0, horasACapturar)) {
-    const real = Math.round(r.uphplaneado * PATRONES[patron][(r.numerohora - 1) % 12]);
-    const m = MOTIVOS[(r.numerohora + patron) % MOTIVOS.length];
-    await T.capturarHora(r.id_registro, {
-      UphReal: real, BuenasPrimera: real - (r.numerohora % 3 === 0 ? 6 : 1),
-      Motivo: real < r.uphplaneado ? m[0] : null, Contramedida: real < r.uphplaneado ? m[1] : null,
-      Id_Usuario: ids.operador,
-    });
-  }
+  // Primero los paros: los planeados descuentan la meta de su hora
   for (const [cat, desdeMin, dur, desc] of paros) {
     const p = (await pool.query(
       `SELECT to_char($1::timestamp + $2 * INTERVAL '1 minute', 'YYYY-MM-DD HH24:MI:SS') AS i,
               to_char($1::timestamp + ($2 + $3) * INTERVAL '1 minute', 'YYYY-MM-DD HH24:MI:SS') AS f`,
       [tt.inicio, desdeMin, dur])).rows[0];
     await T.registrarParo(id, { Id_CategoriaParo: cat, HoraInicio: p.i, HoraFin: p.f, Descripcion: desc, Id_Usuario: ids.tecnico });
+  }
+  // Minutos de paro NO planeado dentro de cada hora (en esos minutos tampoco se produce)
+  const perdidos = Object.fromEntries((await pool.query(
+    `SELECT r.Id_Registro AS id, COALESCE(SUM(CASE WHEN p.Id_Paro IS NULL THEN 0 ELSE EXTRACT(EPOCH FROM (
+              LEAST(p.HoraFin, r.HoraInicio + r.MinutosProgramados * INTERVAL '1 minute') - GREATEST(p.HoraInicio, r.HoraInicio))) / 60 END), 0)::float AS min
+     FROM Registro r
+     LEFT JOIN Paro p ON p.Id_Turno = r.Id_Turno
+       AND p.HoraInicio < r.HoraInicio + r.MinutosProgramados * INTERVAL '1 minute' AND p.HoraFin > r.HoraInicio
+       AND p.Id_CategoriaParo IN (SELECT Id_CategoriaParo FROM CategoriaParo WHERE NOT Planeado)
+     WHERE r.Id_Turno = $1 GROUP BY r.Id_Registro`, [id])).rows.map((x) => [x.id, x.min]));
+
+  const { registros } = await T.obtenerTurno(id);
+  for (const r of registros.slice(0, horasACapturar)) {
+    const disponibles = (r.uphplaneado * 60) / r.uphestandar; // minutos productivos según la meta
+    const factorParo = disponibles ? Math.max(0, 1 - perdidos[r.id_registro] / disponibles) : 0;
+    const real = Math.round(r.uphplaneado * PATRONES[patron][(r.numerohora - 1) % 12] * factorParo);
+    const m = real < r.uphplaneado && perdidos[r.id_registro] > 0
+      ? ['Paro no planeado durante la hora', 'Ver detalle en la lista de paros']
+      : MOTIVOS[(r.numerohora + patron) % MOTIVOS.length];
+    await T.capturarHora(r.id_registro, {
+      UphReal: real, BuenasPrimera: Math.max(0, real - (r.numerohora % 3 === 0 ? 6 : 1)),
+      Motivo: real < r.uphplaneado ? m[0] : null, Contramedida: real < r.uphplaneado ? m[1] : null,
+      Id_Usuario: ids.operador,
+    });
   }
   if (cerrar) await T.cerrarTurno(id, { CerradoEn: tt.fin, Observaciones: 'Turno de ejemplo generado por el script' });
   return id;
