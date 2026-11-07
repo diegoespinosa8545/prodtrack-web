@@ -181,15 +181,54 @@ async function cambiarModelo(idTurno, { Id_Modelo, DesdeHora }) {
 }
 
 // ---------- Paros ----------
+// Horario del turno: de Fecha + HoraInicio a + MinutosProgramados (T2 cruza la medianoche)
+const FMT = `'YYYY-MM-DD HH24:MI'`;
+async function ventanaTurno(c, idTurno) {
+  const r = await c.query(
+    `SELECT to_char(t.Fecha + tt.HoraInicio, ${FMT}) AS inicio,
+            to_char(t.Fecha + tt.HoraInicio + tt.MinutosProgramados * INTERVAL '1 minute', ${FMT}) AS fin,
+            to_char(${AHORA}, ${FMT}) AS ahora
+     FROM Turno t JOIN TipoTurno tt ON tt.Id_TipoTurno = t.Id_TipoTurno WHERE t.Id_Turno = $1`, [idTurno]);
+  return r.rows[0];
+}
+// '2026-11-06T11:45' o '2026-11-06 11:45:00' -> '2026-11-06 11:45' (así se comparan como texto)
+const normalizar = (ts) => String(ts).replace('T', ' ').slice(0, 16);
+const horario = (v) => `${v.inicio.slice(11)} a ${v.fin.slice(11)}${v.fin.slice(0, 10) !== v.inicio.slice(0, 10) ? ' del día siguiente' : ''}`;
+
 async function registrarParo(idTurno, { Id_CategoriaParo, HoraInicio, HoraFin, Descripcion, Id_Usuario }) {
   if (!Id_CategoriaParo || !Id_Usuario) throw new ErrorNegocio('Indica la categoría del paro');
   return transaccion(async (c) => {
     await exigirActivo(c, idTurno);
+    const v = await ventanaTurno(c, idTurno);
+    const ini = HoraInicio ? normalizar(HoraInicio) : v.ahora;
+    const fin = HoraFin ? normalizar(HoraFin) : null;
+
+    // 1. Dentro del horario del turno
+    if (ini < v.inicio || ini >= v.fin) {
+      throw new ErrorNegocio(`El paro debe iniciar dentro del horario del turno (${horario(v)})`);
+    }
+    if (fin && fin <= ini) throw new ErrorNegocio('La hora de fin debe ser posterior a la de inicio');
+    if (fin && fin > v.fin) throw new ErrorNegocio(`El paro no puede terminar después del fin del turno (${v.fin.slice(11)})`);
+    // 2. "En curso" solo si el turno está transcurriendo ahora
+    if (!fin && (v.ahora < v.inicio || v.ahora >= v.fin || ini > v.ahora)) {
+      throw new ErrorNegocio('Fuera del horario del turno no se puede dejar un paro en curso; indica la hora de fin');
+    }
+    // 3. Sin traslape con otros paros del mismo turno
+    const choque = await c.query(
+      `SELECT cp.Nombre, to_char(p.HoraInicio, 'HH24:MI') AS i, COALESCE(to_char(p.HoraFin, 'HH24:MI'), 'en curso') AS f
+       FROM Paro p JOIN CategoriaParo cp ON cp.Id_CategoriaParo = p.Id_CategoriaParo
+       WHERE p.Id_Turno = $1 AND p.HoraInicio < COALESCE($3::timestamp, 'infinity')
+         AND COALESCE(p.HoraFin, 'infinity') > $2::timestamp
+       LIMIT 1`, [idTurno, ini, fin]);
+    if (choque.rowCount) {
+      const x = choque.rows[0];
+      throw new ErrorNegocio(`Se traslapa con otro paro: ${x.nombre} ${x.i}–${x.f}`);
+    }
+
     const r = await c.query(
       `INSERT INTO Paro (Id_Turno, Id_CategoriaParo, HoraInicio, HoraFin, Descripcion, Id_RegistradoPor)
-       VALUES ($1, $2, COALESCE($3::timestamp, date_trunc('minute', ${AHORA})), $4::timestamp, $5, $6)
-       RETURNING Id_Paro`,
-      [idTurno, Id_CategoriaParo, HoraInicio || null, HoraFin || null, (Descripcion || '').trim() || null, Id_Usuario]);
+       VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6) RETURNING Id_Paro`,
+      [idTurno, Id_CategoriaParo, ini, fin, (Descripcion || '').trim() || null, Id_Usuario]);
     await recalcularMetas(c, idTurno);
     return r.rows[0].id_paro;
   });
@@ -201,8 +240,11 @@ async function terminarParo(idParo) {
     if (!p.rowCount) throw new ErrorNegocio('Paro no encontrado', 404);
     if (p.rows[0].horafin) throw new ErrorNegocio('Ese paro ya estaba terminado');
     await exigirActivo(c, p.rows[0].id_turno);
+    const v = await ventanaTurno(c, p.rows[0].id_turno);
+    // Se termina ahora, pero nunca después del fin del turno
     await c.query(
-      `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, date_trunc('minute', ${AHORA})) WHERE Id_Paro = $1`, [idParo]);
+      `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, LEAST(date_trunc('minute', ${AHORA}), $2::timestamp))
+       WHERE Id_Paro = $1`, [idParo, v.fin]);
     await recalcularMetas(c, p.rows[0].id_turno);
     return p.rows[0].id_turno;
   });
@@ -217,10 +259,12 @@ async function cerrarTurno(idTurno, { Observaciones, CerradoEn } = {}) {
     if (pend.rows[0].n > 0) throw new ErrorNegocio(`Faltan ${pend.rows[0].n} horas por capturar`);
 
     const cierre = CerradoEn || (await c.query(`SELECT ${ahoraSQL} AS a`)).rows[0].a;
-    // Los paros que sigan en curso se terminan al momento del cierre
+    const v = await ventanaTurno(c, idTurno);
+    // Los paros que sigan en curso se terminan al cierre, sin pasar del fin del turno
     await c.query(
-      `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, $2::timestamp) WHERE Id_Turno = $1 AND HoraFin IS NULL`,
-      [idTurno, cierre]);
+      `UPDATE Paro SET HoraFin = GREATEST(HoraInicio, LEAST($2::timestamp, $3::timestamp))
+       WHERE Id_Turno = $1 AND HoraFin IS NULL`,
+      [idTurno, cierre, v.fin]);
     await recalcularMetas(c, idTurno);
 
     const { indicadores: k } = await obtenerTurno(idTurno, c);

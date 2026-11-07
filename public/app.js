@@ -242,7 +242,7 @@ document.addEventListener('click', async (e) => {
     case 'salir': cerrarSesion(); break;
     case 'abrir': bootstrap.Offcanvas.getInstance('#menuMovil')?.hide(); formAbrirTurno(); break;
     case 'capturar': formCapturar(d.registros.find((r) => r.id_registro == el.dataset.id)); break;
-    case 'paro': formParo(d.turno.id_turno); break;
+    case 'paro': formParo(d); break;
     case 'modelo': formModelo(d.turno.id_turno, d.registros); break;
     case 'cerrar': formCerrar(d.turno.id_turno, d.registros); break;
     case 'terminar':
@@ -449,17 +449,32 @@ function formCapturar(r) {
   setTimeout(() => $('[name=UphReal]')?.focus(), 400);
 }
 
-function formParo(idTurno) {
-  const ahora = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+// Fecha local en el formato de <input type="datetime-local">: 'YYYY-MM-DDTHH:MM'
+const aLocal = (fecha) => new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+function formParo({ turno, registros }) {
+  const idTurno = turno.id_turno;
+  // Horario del turno a partir de sus horas: de la primera a la última (+ sus minutos)
+  const ultima = registros[registros.length - 1];
+  const inicio = registros[0].horainicio.slice(0, 16).replace(' ', 'T');
+  const fin = aLocal(new Date(new Date(ultima.horainicio.replace(' ', 'T')).getTime() + ultima.minutosprogramados * 60000));
+  const ahora = aLocal(new Date());
+  const dentro = ahora >= inicio && ahora < fin;
+  // Propuesta: ahora si el turno está transcurriendo; si no, el inicio de la primera hora pendiente
+  const pendiente = registros.find((r) => r.uphreal === null) || registros[0];
+  const propuesta = dentro ? ahora : pendiente.horainicio.slice(0, 16).replace(' ', 'T');
   abrirModal('Registrar paro', `
     <div class="mb-2"><label class="form-label">Categoría</label>
       <select name="Id_CategoriaParo" class="form-select">${opciones(estado.catalogos.categorias, 'id_categoriaparo',
         (c) => c.nombre + (c.planeado ? ' (planeado)' : ''))}</select></div>
     <div class="row g-2 mb-2">
-      <div class="col-sm"><label class="form-label">Inicio</label><input type="datetime-local" name="HoraInicio" class="form-control" value="${ahora}"></div>
-      <div class="col-sm"><label class="form-label">Fin <span class="text-secondary fw-normal small">(vacío = en curso)</span></label>
-        <input type="datetime-local" name="HoraFin" class="form-control"></div>
+      <div class="col-sm"><label class="form-label">Inicio</label>
+        <input type="datetime-local" name="HoraInicio" class="form-control" value="${propuesta}" min="${inicio}" max="${fin}" required></div>
+      <div class="col-sm"><label class="form-label">Fin <span class="text-secondary fw-normal small">${dentro ? '(vacío = en curso)' : '(obligatorio)'}</span></label>
+        <input type="datetime-local" name="HoraFin" class="form-control" min="${inicio}" max="${fin}"></div>
     </div>
+    <div class="form-text mb-2">Horario del turno: ${inicio.slice(11)} a ${fin.slice(11)}${fin.slice(0, 10) !== inicio.slice(0, 10) ? ' del día siguiente' : ''}.
+      ${dentro ? '' : 'El turno no está transcurriendo ahora, así que el paro necesita hora de fin.'}</div>
     <div class="mb-2"><label class="form-label">Descripción</label><input name="Descripcion" maxlength="300" class="form-control"></div>`,
   async (f) => {
     await api(`/turnos/${idTurno}/paros`, { method: 'POST', body: { ...f, Id_Usuario: estado.usuario.id_usuario } });
