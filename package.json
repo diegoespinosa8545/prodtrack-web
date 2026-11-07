@@ -1,0 +1,19 @@
+{
+  "name": "prodtrack",
+  "version": "0.1.0",
+  "description": "Pro(D)Track · prototipo web del monitor de producción hora por hora",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "db:init": "node scripts/init-db.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

@@ -1,0 +1,550 @@
+/* ==================================================
+    Pro(D)Track · Hoja de estilos
+    Se apoya en Bootstrap 5 y solo agrega lo propio del sistema.
+    1. Variables   2. Base   3. Layout   4. Sidebar
+    5. Botones     6. Tarjetas y KPIs    7. Tablas
+    8. Modales     9. Acceso (login)     10. Utilidades
+   ================================================== */
+
+
+/* ==================================================
+    1. VARIABLES
+   ================================================== */
+:root {
+    /* Marca */
+    --pt-primario: #1565c0;
+    --pt-primario-hover: #187bed;
+    --pt-acento: #42a5f5;
+    --pt-marca: #1976d2;
+
+    /* Estados */
+    --pt-verde: #00af50;
+    --pt-rojo: #e62020;
+    --pt-naranja: #ec7c30;
+    --pt-azul: #006fc0;
+    --pt-morado: #6000c0;
+    --pt-amarillo: #f7ba00;
+
+    /* Semáforo del tablero (fondo de fila / punto) */
+    --pt-fila: #f7f7f7;
+    --pt-fila-verde: #e3f5ea;
+    --pt-fila-amarilla: #fff4d1;
+    --pt-fila-roja: #fde3e1;
+    --pt-punto-verde: #27ae61;
+    --pt-punto-amarillo: #f1c40f;
+    --pt-punto-rojo: #e73302;
+
+    /* Superficies y forma */
+    --pt-gris-pildora: #f2f2f2;
+    --pt-gris-modal: #e8e8e8;
+    --pt-radio-xl: 40px;
+    --pt-radio-lg: 25px;
+    --pt-radio-md: 20px;
+    --pt-radio-sm: 15px;
+    --pt-sombra: 0 8px 20px rgba(0, 0, 0, .12);
+    --pt-sombra-suave: 0 4px 24px rgba(21, 101, 192, .10);
+
+    --pt-fuente: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+
+/* ==================================================
+    2. BASE
+   ================================================== */
+body {
+    font-family: var(--pt-fuente);
+    min-height: 100vh;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400;
+    font-size: 22px;
+    line-height: 1;
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+.icono-relleno { font-variation-settings: 'FILL' 1, 'wght' 400; }
+
+
+/* ==================================================
+    3. LAYOUT GENERAL
+   ================================================== */
+.marca {
+    color: var(--pt-marca);
+    font-weight: 700;
+}
+
+.contenedor-principal {
+    display: flex;
+    justify-content: center;
+    padding: 0 1rem 1rem;
+}
+
+.tarjeta-principal {
+    width: 100%;
+    max-width: 1600px;
+    height: calc(100vh - 96px);
+    min-height: 520px;
+    border-radius: var(--pt-radio-xl);
+    overflow: hidden;
+}
+
+.contenido {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.min-h-0 { min-height: 0; }
+
+/* Encabezado redondeado de cada tarjeta (estilo píldora) */
+.encabezado-pildora {
+    text-align: center;
+    border-radius: 50rem !important;
+    margin: .35rem .35rem .25rem;
+    border-bottom: 0;
+    background: var(--pt-gris-pildora);
+    font-weight: 600;
+}
+
+
+/* ==================================================
+    4. SIDEBAR
+   ================================================== */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    height: 100%;
+    padding: .5rem;
+}
+
+/* Datos del usuario en píldoras */
+.tarjeta-usuario .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    padding: 1rem;
+}
+
+.pildora-dato {
+    width: 85%;
+    padding: .35rem .75rem;
+    border-radius: 50rem;
+    background: var(--pt-gris-pildora);
+    color: #6c757d;
+    text-align: center;
+    font-size: .9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Lista de turnos activos: un color por máquina (variables --c y --c-fondo en línea) */
+.turno-opcion {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    padding: .3rem .6rem;
+    border: none;
+    border-radius: 50rem;
+    background: transparent;
+    color: var(--c, #6c757d);
+    text-align: left;
+    opacity: .65;
+    transition: opacity .15s ease, background-color .15s ease;
+}
+
+    .turno-opcion:hover { opacity: 1; }
+
+    .turno-opcion.activo {
+        opacity: 1;
+        background: var(--c-fondo, #f0f0f0);
+        font-weight: 700;
+    }
+
+    .turno-opcion .progreso {
+        margin-left: auto;
+        font-size: .75rem;
+        color: #6c757d;
+        font-weight: 400;
+    }
+
+/* Módulos (navegación) */
+.btn-modulo {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    border-radius: 50rem;
+    color: #495057;
+    text-decoration: none;
+    font-size: .95rem;
+    transition: background-color .15s ease;
+}
+
+    .btn-modulo:hover { background: #f0f0f0; color: #212529; }
+
+    .btn-modulo.activo {
+        background: #e8f4fd;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+
+
+/* ==================================================
+    5. BOTONES
+   ================================================== */
+
+/* Base: botón píldora con efecto de escala al pasar el cursor */
+.btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    border-radius: 50rem;
+    border-width: 2px;
+    font-family: var(--pt-fuente);
+    font-weight: 500;
+    transition: transform .18s ease, box-shadow .18s ease, background-color .15s ease, color .15s ease;
+}
+
+    .btn-pill:hover,
+    .btn-pill:focus-visible {
+        transform: scale(1.05);
+        box-shadow: var(--pt-sombra);
+        z-index: 3;
+    }
+
+/* Tamaño grande: botones de los modales y SALIR */
+.btn-pill-lg {
+    min-width: 190px;
+    height: 58px;
+    padding: .4rem 1.25rem;
+    font-size: 1.35rem;
+}
+
+    .btn-pill-lg .material-symbols-outlined { font-size: 34px; }
+
+.modal-footer .btn-pill {
+    min-width: 170px;
+    height: 54px;
+    font-size: 1.2rem;
+}
+
+    .modal-footer .btn-pill .material-symbols-outlined { font-size: 30px; }
+
+/* Rellenos: color fijo, texto blanco */
+.btn-aceptar,
+.btn-cancelar,
+.btn-salir {
+    color: #fff;
+}
+
+.btn-aceptar { background: var(--pt-verde); border-color: var(--pt-verde); }
+.btn-cancelar,
+.btn-salir { background: var(--pt-rojo); border-color: var(--pt-rojo); }
+
+    .btn-aceptar:hover, .btn-aceptar:focus-visible,
+    .btn-cancelar:hover, .btn-cancelar:focus-visible,
+    .btn-salir:hover, .btn-salir:focus-visible {
+        color: #fff;
+        background: var(--btn-fondo);
+        border-color: transparent;
+    }
+
+.btn-aceptar { --btn-fondo: var(--pt-verde); }
+.btn-cancelar, .btn-salir { --btn-fondo: var(--pt-rojo); }
+
+/* Contorno de color que se rellena al pasar el cursor (acciones del turno) */
+.btn-contorno {
+    --c: var(--pt-azul);
+    color: var(--c);
+    border-color: var(--c);
+    background: #fff;
+    padding: .3rem 1rem;
+}
+
+    .btn-contorno:hover,
+    .btn-contorno:focus-visible,
+    .btn-contorno.active {
+        color: #fff;
+        background: var(--c);
+        border-color: var(--c);
+    }
+
+.c-azul { --c: var(--pt-azul); }
+.c-naranja { --c: var(--pt-naranja); }
+.c-rojo { --c: var(--pt-rojo); }
+.c-verde { --c: var(--pt-verde); }
+.c-morado { --c: var(--pt-morado); }
+
+/* Botón de icono dentro de las filas */
+.btn-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .2rem;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    transition: color .15s ease, transform .15s ease;
+}
+
+    .btn-icono:hover { color: var(--pt-amarillo); transform: translateY(-1px); }
+
+
+/* ==================================================
+    6. TARJETAS Y KPIs
+   ================================================== */
+.card-pt {
+    border-radius: var(--pt-radio-lg);
+    border: 1px solid rgba(0, 0, 0, .06);
+}
+
+.kpi {
+    border-radius: var(--pt-radio-md);
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .05);
+}
+
+    .kpi .etiqueta {
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #6c757d;
+    }
+
+    .kpi .valor {
+        font-size: 1.7rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+/* Distintivo de máquina (mismo color que en el sidebar) */
+.etiqueta-maquina {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .15rem .7rem;
+    border-radius: 50rem;
+    background: var(--c-fondo);
+    color: var(--c);
+    font-weight: 700;
+}
+
+.barra-pareto {
+    height: 1.1rem;
+    border-radius: 50rem;
+}
+
+
+/* ==================================================
+    7. TABLAS (filas separadas y redondeadas)
+   ================================================== */
+.tabla-pt {
+    --bs-table-bg: transparent;
+    border-collapse: separate;
+    border-spacing: 0 .4rem;
+    margin-bottom: 0;
+}
+
+    .tabla-pt thead th {
+        background: transparent;
+        border-bottom: 1px solid #6c757d;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .tabla-pt tbody tr { background: var(--pt-fila); }
+
+    .tabla-pt tbody td,
+    .tabla-pt tbody th {
+        border: 0;
+        vertical-align: middle;
+    }
+
+    .tabla-pt tbody tr > :first-child {
+        border-top-left-radius: var(--pt-radio-md);
+        border-bottom-left-radius: var(--pt-radio-md);
+    }
+
+    .tabla-pt tbody tr > :last-child {
+        border-top-right-radius: var(--pt-radio-md);
+        border-bottom-right-radius: var(--pt-radio-md);
+    }
+
+    .tabla-pt tbody tr.fila-verde { background: var(--pt-fila-verde); }
+    .tabla-pt tbody tr.fila-amarilla { background: var(--pt-fila-amarilla); }
+    .tabla-pt tbody tr.fila-roja { background: var(--pt-fila-roja); }
+
+    .tabla-pt tbody tr.clicable { cursor: pointer; }
+
+        .tabla-pt tbody tr.clicable:hover { filter: brightness(.96); }
+
+.tabla-tablero td { white-space: nowrap; }
+
+    .tabla-tablero td.motivo {
+        white-space: normal;
+        min-width: 190px;
+        font-size: .85rem;
+    }
+
+.semaforo {
+    display: inline-block;
+    width: .85rem;
+    height: .85rem;
+    border-radius: 50%;
+    background: #ced4da;
+}
+
+    .semaforo.verde { background: var(--pt-punto-verde); }
+    .semaforo.amarilla { background: var(--pt-punto-amarillo); }
+    .semaforo.roja { background: var(--pt-punto-rojo); }
+
+
+/* ==================================================
+    8. MODALES
+   ================================================== */
+.modal-pt .modal-content {
+    background: var(--pt-gris-modal);
+    border: none;
+    border-radius: var(--pt-radio-lg);
+    box-shadow: 0 18px 40px rgba(12, 20, 30, .12);
+    overflow: hidden;
+}
+
+.modal-pt .modal-header,
+.modal-pt .modal-footer {
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.modal-pt .modal-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+.modal-pt .modal-body { padding: .5rem 1.5rem 1rem; }
+
+.modal-pt .form-control,
+.modal-pt .form-select {
+    border-radius: var(--pt-radio-sm);
+    border: 1.5px solid #e2e8f0;
+    background-color: #fff;
+}
+
+    .modal-pt .form-control:focus,
+    .modal-pt .form-select:focus {
+        border-color: var(--pt-marca);
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, .08);
+    }
+
+.modal-pt .form-label {
+    font-weight: 600;
+    font-size: .9rem;
+    margin-bottom: .25rem;
+}
+
+@media (max-width: 576px) {
+    .modal-pt { margin: 1rem; }
+    .modal-footer .btn-pill { min-width: 130px; }
+}
+
+
+/* ==================================================
+    9. ACCESO (LOGIN)
+   ================================================== */
+.acceso {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: #f0f7ff;
+}
+
+.card-login {
+    width: 100%;
+    max-width: 400px;
+    border: none;
+    border-radius: var(--pt-radio-lg);
+    box-shadow: var(--pt-sombra-suave);
+    position: relative;
+    overflow: hidden;
+}
+
+    /* Barra de acento azul arriba de la tarjeta */
+    .card-login::before {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--pt-primario), var(--pt-acento));
+    }
+
+    .card-login .form-select {
+        border-radius: var(--pt-radio-md);
+        border: 1.5px solid #e2e8f0;
+        background-color: #f8fafc;
+        padding: .7rem 1rem;
+    }
+
+        .card-login .form-select:focus {
+            border-color: var(--pt-marca);
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, .08);
+            background-color: #fff;
+        }
+
+    .card-login .btn-primary {
+        background: var(--pt-primario);
+        border-color: var(--pt-primario);
+        border-radius: var(--pt-radio-md);
+        padding: .75rem;
+        font-weight: 600;
+        letter-spacing: .03em;
+    }
+
+        .card-login .btn-primary:hover {
+            background: var(--pt-primario-hover);
+            box-shadow: 0 4px 14px rgba(21, 101, 192, .3);
+        }
+
+    .card-login .animado {
+        animation: entrada .4s ease both;
+    }
+
+
+/* ==================================================
+    10. UTILIDADES
+   ================================================== */
+.toast { border-radius: var(--pt-radio-sm); }
+
+@keyframes entrada {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ocultar flechas de los campos numéricos */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] { -moz-appearance: textfield; }
+
+/* En móvil la tarjeta principal crece con su contenido */
+@media (max-width: 767.98px) {
+    .tarjeta-principal {
+        height: auto;
+        min-height: 0;
+        border-radius: var(--pt-radio-lg);
+    }
+
+    .contenido { overflow: visible; }
+}
