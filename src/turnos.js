@@ -7,8 +7,9 @@ class ErrorNegocio extends Error {
 }
 
 const ahoraSQL = `to_char(${AHORA}, 'YYYY-MM-DD HH24:MI:SS')`;
-// La meta inicial de cada hora es el 90 % del UPH estándar; el técnico puede ajustarla
-const FACTOR_META = 0.9;
+// Meta de cada hora: UphPlaneado = UphEstandar × MinutosProgramados / 60.
+// El UPH estándar del modelo ya incluye el factor de 0.85 de las máquinas
+// semiautomatizadas que dependen de un operador, así que aquí no se ajusta.
 
 // ---------- Abrir turno ----------
 // Crea el Turno y sus horas (10 en T1, 12 en T2) con la meta del modelo inicial.
@@ -36,7 +37,7 @@ async function abrirTurno({ Id_Maquina, Id_TipoTurno, Fecha, Id_Tecnico, Id_Oper
               $2::date + tt.HoraInicio + (n - 1) * INTERVAL '1 hour',
               LEAST(60, tt.MinutosProgramados - (n - 1) * 60),
               m.Id_Modelo, m.UphEstandar,
-              ROUND(m.UphEstandar * ${FACTOR_META} * LEAST(60, tt.MinutosProgramados - (n - 1) * 60) / 60.0)
+              ROUND(m.UphEstandar * LEAST(60, tt.MinutosProgramados - (n - 1) * 60) / 60.0)
        FROM TipoTurno tt
        CROSS JOIN Modelo m
        CROSS JOIN generate_series(1, CEIL(tt.MinutosProgramados / 60.0)::int) AS n
@@ -151,7 +152,7 @@ async function cambiarModelo(idTurno, { Id_Modelo, DesdeHora }) {
     await exigirActivo(c, idTurno);
     const r = await c.query(
       `UPDATE Registro r SET Id_Modelo = m.Id_Modelo, UphEstandar = m.UphEstandar,
-              UphPlaneado = ROUND(m.UphEstandar * ${FACTOR_META} * r.MinutosProgramados / 60.0)
+              UphPlaneado = ROUND(m.UphEstandar * r.MinutosProgramados / 60.0)
        FROM Modelo m
        WHERE m.Id_Modelo = $2 AND r.Id_Turno = $1 AND r.NumeroHora >= $3 AND r.UphReal IS NULL`,
       [idTurno, Id_Modelo, DesdeHora]);

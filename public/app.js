@@ -26,6 +26,7 @@ const ROL = { operador: 'Operador', tecnico: 'Técnico', supervisor: 'Supervisor
 const TITULO = { tablero: 'Tablero', historial: 'Historial', detalle: 'Historial' };
 const puede = {
   capturar: () => ['operador', 'tecnico'].includes(estado.usuario.rol),
+  verHistorial: () => ['tecnico', 'supervisor'].includes(estado.usuario.rol),
   operarTurno: () => estado.usuario.rol === 'tecnico',
 };
 const colorOEE = (x) => (x === null || x === undefined ? 'secondary' : x >= 0.85 ? 'success' : x >= 0.65 ? 'warning' : 'danger');
@@ -192,7 +193,7 @@ function dibujarSidebar() {
         <div class="card-header encabezado-pildora">Módulos</div>
         <div class="card-body py-2 px-3 d-flex flex-column gap-1">
           ${modulo('tablero', 'grid_view', 'Tablero hora × hora')}
-          ${modulo('historial', 'history', 'Historial y OEE')}
+          ${puede.verHistorial() ? modulo('historial', 'history', 'Historial y OEE') : ''}
         </div>
       </div>
 
@@ -210,6 +211,7 @@ function dibujarSidebar() {
 //  NAVEGACIÓN
 // ==================================================
 function irA(vista) {
+  if (vista !== 'tablero' && !puede.verHistorial()) vista = 'tablero'; // el operador solo usa el tablero
   estado.vista = vista;
   clearInterval(estado.temporizador);
   bootstrap.Offcanvas.getInstance('#menuMovil')?.hide();
@@ -414,7 +416,7 @@ async function formAbrirTurno() {
     <div class="mb-2"><label class="form-label">Operador</label>
       <select name="Id_Operador" class="form-select"><option value="">— Sin asignar —</option>
         ${opciones(usuarios.filter((u) => u.rol === 'operador'), 'id_usuario', (u) => u.nombre)}</select></div>
-    <div class="form-text">Se crean las horas del turno con la meta del modelo (90 % del UPH estándar).</div>`,
+    <div class="form-text">Se crean las horas del turno; la meta de cada hora es el UPH estándar del modelo (la mitad en la hora de 30 min).</div>`,
   async (f) => {
     const r = await api('/turnos', { method: 'POST', body: { ...f, Id_Tecnico: estado.usuario.id_usuario } });
     estado.turnoSel = r.Id_Turno; aviso('Turno abierto'); irA('tablero');

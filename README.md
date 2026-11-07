@@ -44,7 +44,8 @@ server.js            arranque del servidor
 ## Reglas implementadas
 
 - Una máquina solo puede tener un turno activo, y (Máquina, Fecha, Tipo de turno) es único.
-- Meta inicial de cada hora = 90 % del UPH estándar del modelo (la última hora de T1 dura 30 min).
+- Meta de cada hora = UPH estándar × minutos / 60 (la última hora de T1 dura 30 min, así que su meta es la mitad). El UPH estándar ya incluye el factor de 0.85 de las máquinas semiautomatizadas.
+- Permisos por rol (aplicados en la interfaz): el operador solo ve el tablero y captura horas; el técnico además abre, opera y cierra turnos y ve el historial; el supervisor solo consulta tablero e historial.
 - Alerta por hora: verde ≥ 100 % de la meta, amarilla 85–99 %, roja < 85 %.
 - Motivo obligatorio cuando la hora no cumple la meta (validado en la API y con un CHECK en la base).
 - Auditoría: quién capturó y quién editó cada hora.
